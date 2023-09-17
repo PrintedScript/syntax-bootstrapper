@@ -116,7 +116,12 @@ async fn main() {
     // Clear the terminal before printing the startup text
     #[cfg(target_os = "windows")]
     {
-        std::process::Command::new("cls").spawn().unwrap();
+        std::process::Command::new("cmd")
+        .args(&["/c", "cls"])
+        .spawn()
+        .expect("cls command failed to start")
+        .wait()
+        .expect("failed to wait");
     }
     #[cfg(not(target_os = "windows"))]
     {
@@ -175,7 +180,19 @@ async fn main() {
         .unwrap();
     debug(format!("Setup Server: {} | Base Server: {}", setup_url.bright_blue(), base_url.bright_blue()).as_str());
     debug("Fetching latest client version from setup server");
-    let latest_client_version = http_get(&http_client ,&format!("https://{}/version", setup_url)).await.unwrap();
+    let latest_client_version : String;
+    let latest_client_version_response = http_get(&http_client ,&format!("https://{}/version", setup_url)).await;
+    match latest_client_version_response {
+        Ok(latest_client_version_result) => {
+            debug(&format!("Latest Client Version: {}", latest_client_version_result.bright_blue()));
+            latest_client_version = latest_client_version_result;
+        },
+        Err(e) => {
+            error(&format!("Failed to fetch latest client version from setup server: {}, are you connected to the internet?", e));
+            std::thread::sleep(std::time::Duration::from_secs(10));
+            std::process::exit(0);
+        }
+    }
     // Wait for the latest client version to be fetched
     info(&format!("Latest Client Version: {}", latest_client_version.cyan().underline()));
 
@@ -231,7 +248,8 @@ async fn main() {
     // If it doesent exist, then we got either a fresh directory or a corrupted installation
     // So delete the every file in the current version directory except for the Bootstrapper itself
     let app_settings_path = current_version_directory.join("AppSettings.xml");
-    if !app_settings_path.exists() {
+    let client_executable_path = current_version_directory.join("SyntaxPlayerBeta.exe");
+    if !app_settings_path.exists() || !client_executable_path.exists() {
         info("Downloading the latest client files, this may take a while.");
         for entry in std::fs::read_dir(&current_version_directory).unwrap() {
             let entry = entry.unwrap();
@@ -264,6 +282,8 @@ async fn main() {
         let ContentParticles : PathBuf = download_file_prefix(&http_client, format!("{}content-particles.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
 
         let ShadersZip : PathBuf = download_file_prefix(&http_client, format!("{}shaders.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
+
+        let Client2018Zip : PathBuf = download_file_prefix(&http_client, format!("{}2018client.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
         info("Download finished, extracting files.");
 
         fn extract_to_dir( zip_file : &PathBuf, target_dir : &PathBuf ) {
@@ -318,6 +338,10 @@ async fn main() {
         extract_to_dir(&ContentTerrainZip, &terrain_directory);
         extract_to_dir(&ContentTextures3Zip, &textures_directory);
         extract_to_dir(&ShadersZip, &shaders_directory);
+
+        let client_2018_directory = current_version_directory.join("Client2018");
+        create_folder_if_not_exists(&client_2018_directory).await;
+        extract_to_dir(&Client2018Zip, &client_2018_directory);
 
         info("Finished extracting files, cleaning up.");
         std::fs::remove_dir_all(&temp_downloads_directory).unwrap();
@@ -418,6 +442,7 @@ x-scheme-handler/syntax-player=syntax-player.desktop
     let mut launch_mode = String::new();
     let mut authentication_ticket = String::new();
     let mut join_script = String::new();
+    let mut client_year = String::new();
     
     for arg in main_args {
         let mut arg_split = arg.split(":");
@@ -439,6 +464,9 @@ x-scheme-handler/syntax-player=syntax-player.desktop
             "placelauncherurl" => {
                 join_script = value.to_string();
             },
+            "clientyear" => {
+                client_year = value.to_string();
+            },
             _ => {}
         }
     }
@@ -456,13 +484,27 @@ x-scheme-handler/syntax-player=syntax-player.desktop
             info(format!("If you want to use a custom wine binary, please create a file at {} with the path to the wine binary", wine_path_file.to_str().unwrap()).as_str());
         }
     }
+    let client_executable_path : PathBuf;
+    if client_year == "2018" {
+        client_executable_path = current_version_directory.join("Client2018").join("SyntaxPlayerBeta.exe");
+    } else {
+        client_executable_path = current_version_directory.join("SyntaxPlayerBeta.exe");
+    }
+    if !client_executable_path.exists() {
+        // Delete AppSettings.xml so the bootstrapper will download the client again
+        let app_settings_path = current_version_directory.join("AppSettings.xml");
+        std::fs::remove_file(app_settings_path).unwrap();
 
+        error("Failed to run SyntaxPlayerBeta.exe, is your antivirus removing it? The bootstrapper will attempt to redownload the client on next launch.");
+        std::thread::sleep(std::time::Duration::from_secs(20));
+        std::process::exit(0);
+    }
     match launch_mode.as_str() {
         "play" => {
             info("Launching SYNTAX");
             #[cfg(target_os = "windows")]
-            {
-                let mut command = std::process::Command::new(current_version_directory.join("SyntaxPlayerBeta.exe"));
+            {           
+                let mut command = std::process::Command::new(client_executable_path);
                 command.args(&["--play","--authenticationUrl", format!("https://{}/Login/Negotiate.ashx", base_url).as_str(), "--authenticationTicket", authentication_ticket.as_str(), "--joinScriptUrl", format!("{}",join_script.as_str()).as_str()]);
                 command.spawn().unwrap();
                 std::thread::sleep(std::time::Duration::from_secs(5));
@@ -472,7 +514,7 @@ x-scheme-handler/syntax-player=syntax-player.desktop
             {
                 // We have to launch the game through wine
                 let mut command = std::process::Command::new(custom_wine);
-                command.args(&[current_version_directory.join("SyntaxPlayerBeta.exe").to_str().unwrap(), "--play","--authenticationUrl", format!("https://{}/Login/Negotiate.ashx", base_url).as_str(), "--authenticationTicket", authentication_ticket.as_str(), "--joinScriptUrl", format!("{}",join_script.as_str()).as_str()]);
+                command.args(&[client_executable_path.to_str().unwrap(), "--play","--authenticationUrl", format!("https://{}/Login/Negotiate.ashx", base_url).as_str(), "--authenticationTicket", authentication_ticket.as_str(), "--joinScriptUrl", format!("{}",join_script.as_str()).as_str()]);
                 // We must wait for the game to exit before exiting the bootstrapper
                 let mut child = command.spawn().unwrap();
                 child.wait().unwrap();
