@@ -485,6 +485,7 @@ x-scheme-handler/syntax-player=syntax-player.desktop
         }
     }
     let client_executable_path : PathBuf;
+    debug(&client_year.to_string());
     if client_year == "2018" {
         client_executable_path = current_version_directory.join("Client2018").join("SyntaxPlayerBeta.exe");
     } else {
