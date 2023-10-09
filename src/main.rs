@@ -38,7 +38,12 @@ fn debug( message : &str ) {}
 
 pub async fn http_get( client: &Client ,url: &str ) -> Result<String, reqwest::Error> {
     debug(&format!("{} {}", "GET".green(), url.bright_blue()));
-    let response_body = client.get(url).send().await?.text().await?;
+    let response = client.get(url).send().await;
+    if (response.is_err()) {
+        debug(&format!("Failed to fetch {}", url.bright_blue()));
+        return Err(response.err().unwrap());
+    }
+    let response_body = response.unwrap().text().await.unwrap();
     Ok(response_body)
 }
 
@@ -131,7 +136,7 @@ async fn main() {
     let args: Vec<String> = std::env::args().collect();
     let base_url : &str = "www.syntax.eco";
     let mut setup_url : &str = "setup.syntax.eco";
-    let fallback_setup_url : &str = "setup.syntax.eco.s3.amazonaws.com";
+    let fallback_setup_url : &str = "d2f3pa9j0u8v6f.cloudfront.net";
     let mut bootstrapper_filename :&str = "SyntaxPlayerLauncher.exe";
     #[cfg(not(target_os = "windows"))]
     {
@@ -183,17 +188,18 @@ async fn main() {
     debug("Fetching latest client version from setup server");
     
     let latest_client_version : String;
-    let latest_client_version_response = http_get(&http_client ,&format!("http://{}/version", setup_url)).await;
+    let latest_client_version_response = http_get(&http_client ,&format!("https://{}/version", setup_url)).await;
     match latest_client_version_response {
         Ok(latest_client_version_result) => {
             debug(&format!("Latest Client Version: {}", latest_client_version_result.bright_blue()));
             latest_client_version = latest_client_version_result;
         },
         Err(e) => {
-            error(&format!("Failed to fetch latest client version from setup server: {}, attempting to fallback to {}", e, fallback_setup_url));
-            let fallback_client_version_response = http_get(&http_client ,&format!("http://{}/version", fallback_setup_url)).await;
+            error(&format!("Failed to fetch latest client version from setup server: [{}], attempting to fallback to {}", e.to_string().bright_red(), fallback_setup_url.bright_blue()));
+            let fallback_client_version_response = http_get(&http_client ,&format!("https://{}/version", fallback_setup_url)).await;
             match fallback_client_version_response {
                 Ok(fallback_client_version_result) => {
+                    info(&format!("Successfully fetched latest client version from fallback setup server: {}", fallback_setup_url.bright_blue()));
                     debug(&format!("Latest Client Version: {}", fallback_client_version_result.bright_blue()));
                     latest_client_version = fallback_client_version_result;
                     setup_url = fallback_setup_url;
@@ -209,6 +215,7 @@ async fn main() {
 
     // Wait for the latest client version to be fetched
     info(&format!("Latest Client Version: {}", latest_client_version.cyan().underline()));
+    debug(&format!("Setup Server: {}", setup_url.cyan().underline()));
 
     let installation_directory = get_installation_directory();
     debug(&format!("Installation Directory: {}", installation_directory.to_str().unwrap().bright_blue()));
@@ -235,7 +242,7 @@ async fn main() {
         if !latest_bootstrapper_path.exists() {
             info("Downloading the latest bootstrapper and restarting");
             // Download the latest bootstrapper
-            download_file(&http_client, &format!("http://{}/{}-{}", setup_url, latest_client_version, bootstrapper_filename), &latest_bootstrapper_path).await;
+            download_file(&http_client, &format!("https://{}/{}-{}", setup_url, latest_client_version, bootstrapper_filename), &latest_bootstrapper_path).await;
         }
         // Run the latest bootstrapper ( with the same arguments passed to us ) and exit
         #[cfg(target_os = "windows")]
@@ -277,7 +284,7 @@ async fn main() {
             }
         }
 
-        let VersionURLPrefix = format!("http://{}/{}-", setup_url, latest_client_version);
+        let VersionURLPrefix = format!("https://{}/{}-", setup_url, latest_client_version);
         let SyntaxAppZip : PathBuf = download_file_prefix(&http_client, format!("{}SyntaxApp.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
         let NPSyntaxProxyZip : PathBuf = download_file_prefix(&http_client, format!("{}NPSyntaxProxy.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
         let SyntaxProxyZip : PathBuf = download_file_prefix(&http_client, format!("{}SyntaxProxy.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
@@ -415,7 +422,7 @@ x-scheme-handler/syntax-player=syntax-player.desktop
 "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <Settings>
 	<ContentFolder>content</ContentFolder>
-	<BaseUrl>http://{}</BaseUrl>
+	<BaseUrl>https://{}</BaseUrl>
 </Settings>", base_url
         );
         std::fs::write(app_settings_path, app_settings_xml).unwrap();
@@ -433,18 +440,18 @@ x-scheme-handler/syntax-player=syntax-player.desktop
     }
 
     // Parse the arguments passed to the bootstrapper
-    // Looks something like "syntax-player://1+launchmode:play+gameinfo:TICKET+placelauncherurl:http://www.syntax.eco/Game/placelauncher.ashx?placeId=660&t=TICKET+k:l"
+    // Looks something like "syntax-player://1+launchmode:play+gameinfo:TICKET+placelauncherurl:https://www.syntax.eco/Game/placelauncher.ashx?placeId=660&t=TICKET+k:l"
     debug(&format!("Arguments Passed: {}", args.join(" ").bright_blue()));
     if args.len() == 1 {
         // Just open the website
         #[cfg(target_os = "windows")]
         {
-            std::process::Command::new("cmd").arg("/c").arg("start").arg("http://www.syntax.eco/games").spawn().unwrap();
+            std::process::Command::new("cmd").arg("/c").arg("start").arg("https://www.syntax.eco/games").spawn().unwrap();
             std::process::exit(0);
         }
         #[cfg(not(target_os = "windows"))]
         {
-            std::process::Command::new("xdg-open").arg("http://www.syntax.eco/games").spawn().unwrap();
+            std::process::Command::new("xdg-open").arg("https://www.syntax.eco/games").spawn().unwrap();
             std::process::exit(0);
         }
     }
@@ -520,7 +527,7 @@ x-scheme-handler/syntax-player=syntax-player.desktop
             #[cfg(target_os = "windows")]
             {           
                 let mut command = std::process::Command::new(client_executable_path);
-                command.args(&["--play","--authenticationUrl", format!("http://{}/Login/Negotiate.ashx", base_url).as_str(), "--authenticationTicket", authentication_ticket.as_str(), "--joinScriptUrl", format!("{}",join_script.as_str()).as_str()]);
+                command.args(&["--play","--authenticationUrl", format!("https://{}/Login/Negotiate.ashx", base_url).as_str(), "--authenticationTicket", authentication_ticket.as_str(), "--joinScriptUrl", format!("{}",join_script.as_str()).as_str()]);
                 command.spawn().unwrap();
                 std::thread::sleep(std::time::Duration::from_secs(5));
                 std::process::exit(0);
@@ -529,7 +536,7 @@ x-scheme-handler/syntax-player=syntax-player.desktop
             {
                 // We have to launch the game through wine
                 let mut command = std::process::Command::new(custom_wine);
-                command.args(&[client_executable_path.to_str().unwrap(), "--play","--authenticationUrl", format!("http://{}/Login/Negotiate.ashx", base_url).as_str(), "--authenticationTicket", authentication_ticket.as_str(), "--joinScriptUrl", format!("{}",join_script.as_str()).as_str()]);
+                command.args(&[client_executable_path.to_str().unwrap(), "--play","--authenticationUrl", format!("https://{}/Login/Negotiate.ashx", base_url).as_str(), "--authenticationTicket", authentication_ticket.as_str(), "--joinScriptUrl", format!("{}",join_script.as_str()).as_str()]);
                 // We must wait for the game to exit before exiting the bootstrapper
                 let mut child = command.spawn().unwrap();
                 child.wait().unwrap();
