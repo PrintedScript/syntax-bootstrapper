@@ -305,6 +305,7 @@ async fn main() {
         let ShadersZip : PathBuf = download_file_prefix(&http_client, format!("{}shaders.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
 
         let Client2018Zip : PathBuf = download_file_prefix(&http_client, format!("{}2018client.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
+        let Client2020Zip : PathBuf = download_file_prefix(&http_client, format!("{}2020client.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
         info("Download finished, extracting files.");
 
         fn extract_to_dir( zip_file : &PathBuf, target_dir : &PathBuf ) {
@@ -363,6 +364,10 @@ async fn main() {
         let client_2018_directory = current_version_directory.join("Client2018");
         create_folder_if_not_exists(&client_2018_directory).await;
         extract_to_dir(&Client2018Zip, &client_2018_directory);
+
+        let client_2020_directory = current_version_directory.join("Client2020");
+        create_folder_if_not_exists(&client_2020_directory).await;
+        extract_to_dir(&Client2020Zip, &client_2020_directory);
 
         info("Finished extracting files, cleaning up.");
         std::fs::remove_dir_all(&temp_downloads_directory).unwrap();
@@ -509,6 +514,8 @@ x-scheme-handler/syntax-player=syntax-player.desktop
     debug(&client_year.to_string());
     if client_year == "2018" {
         client_executable_path = current_version_directory.join("Client2018").join("SyntaxPlayerBeta.exe");
+    } else if client_year == "2020" {
+        client_executable_path = current_version_directory.join("Client2020").join("SyntaxPlayerBeta.exe");
     } else {
         client_executable_path = current_version_directory.join("SyntaxPlayerBeta.exe");
     }
