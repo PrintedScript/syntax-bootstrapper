@@ -247,9 +247,19 @@ async fn main() {
         // Run the latest bootstrapper ( with the same arguments passed to us ) and exit
         #[cfg(target_os = "windows")]
         {
-            let mut command = std::process::Command::new(latest_bootstrapper_path);
+            let mut command = std::process::Command::new(latest_bootstrapper_path.clone());
             command.args(&args[1..]);
-            command.spawn().unwrap();
+            match command.spawn() {
+                Ok(_) => {},
+                Err(e) => {
+                    debug(&format!("Bootstrapper errored with error {}", e));
+                    info("Found bootstrapper was corrupted! Downloading...");
+                    std::fs::remove_file(latest_bootstrapper_path.clone()).unwrap();
+                    download_file(&http_client, &format!("https://{}/{}-{}", setup_url, latest_client_version, bootstrapper_filename), &latest_bootstrapper_path).await;
+                    command.spawn().expect("Bootstrapper is still corrupted.");
+                    std::thread::sleep(std::time::Duration::from_secs(20));
+                }
+            }
         }
         #[cfg(not(target_os = "windows"))]
         {
