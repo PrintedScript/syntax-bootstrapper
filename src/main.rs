@@ -175,30 +175,31 @@ async fn main() {
 
     let installation_directory = get_installation_directory();
     debug!(
-        "Installation Directory: {}",
-        installation_directory.to_str().unwrap().bright_blue()
+        "Instillation Directory: {}",
+        format!("{:?}", installation_directory.display()).bright_blue()
     );
     create_folder_if_not_exists(&installation_directory).await;
 
     let versions_directory = installation_directory.join("Versions");
     debug!(
         "Versions Directory: {}",
-        versions_directory.to_str().unwrap().bright_blue()
+        format!("{:?}", versions_directory.display()).bright_blue()
     );
     create_folder_if_not_exists(&versions_directory).await;
 
     let temp_downloads_directory = installation_directory.join("Downloads");
     debug!(
         "Temp Downloads Directory: {}",
-        temp_downloads_directory.to_str().unwrap().bright_blue()
+        format!("{:?}", temp_downloads_directory.display()).bright_blue()
     );
     create_folder_if_not_exists(&temp_downloads_directory).await;
 
     let current_version_directory = versions_directory.join(format!("{}", latest_client_version));
     debug!(
         "Current Version Directory: {}",
-        current_version_directory.to_str().unwrap().bright_blue()
+        format!("{:?}", current_version_directory.display()).bright_blue()
     );
+
     create_folder_if_not_exists(&current_version_directory).await;
 
     let latest_bootstrapper_path = current_version_directory.join(bootstrapper_filename);
