@@ -230,9 +230,9 @@ async fn main() {
                 Ok(_) => {}
                 Err(e) => {
                     debug!("Bootstrapper errored with error {}", e);
-                    info("Found bootstrapper was corrupted! Downloading...");
+                    info!("Found bootstrapper was corrupted! Downloading...");
                     std::fs::remove_file(latest_bootstrapper_path.clone()).unwrap();
-                    download_file(
+                    download_to_file(
                         &http_client,
                         &format!(
                             "https://{}/{}-{}",

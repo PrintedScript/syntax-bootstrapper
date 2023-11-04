@@ -4,7 +4,6 @@
 use colored::*;
 use dirs::data_local_dir;
 use futures_util::StreamExt;
-use md5;
 use reqwest::Client;
 use reqwest::ClientBuilder;
 use std::io::Cursor;
@@ -16,7 +15,6 @@ use zip_extract;
 use crate::constants::*;
 use tracing::*;
 
-#[cfg(not(target_os = "windows"))]
 use std::io::prelude::*;
 /*
 #[cfg(not(target_os = "windows"))]
