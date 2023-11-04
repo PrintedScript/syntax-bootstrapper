@@ -5,6 +5,7 @@ use md5;
 use metadata::LevelFilter;
 use reqwest::Client;
 use std::path::PathBuf;
+use tokio::fs::create_dir_all;
 use tokio::task::JoinSet;
 use zip_extract;
 
@@ -289,7 +290,10 @@ async fn main() {
 
         let mut set = JoinSet::new();
 
-        for [value, _] in FILES_TO_DOWNLOAD {
+        for [value, path] in FILES_TO_DOWNLOAD {
+            create_dir_all(current_version_directory.join(path))
+                .await
+                .unwrap();
             set.spawn(download_and_extract(
                 value.to_string(),
                 version_url_prefix.clone(),
