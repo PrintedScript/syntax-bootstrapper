@@ -5,7 +5,6 @@ use md5;
 use metadata::LevelFilter;
 use reqwest::Client;
 use std::path::PathBuf;
-use tokio::fs::create_dir_all;
 use tokio::task::JoinSet;
 use zip_extract;
 
@@ -231,9 +230,9 @@ async fn main() {
                 Ok(_) => {}
                 Err(e) => {
                     debug!("Bootstrapper errored with error {}", e);
-                    info!("Found bootstrapper was corrupted! Downloading...");
+                    info("Found bootstrapper was corrupted! Downloading...");
                     std::fs::remove_file(latest_bootstrapper_path.clone()).unwrap();
-                    download_to_file(
+                    download_file(
                         &http_client,
                         &format!(
                             "https://{}/{}-{}",
@@ -290,10 +289,7 @@ async fn main() {
 
         let mut set = JoinSet::new();
 
-        for [value, path] in FILES_TO_DOWNLOAD {
-            create_dir_all(current_version_directory.join(path))
-                .await
-                .unwrap();
+        for [value, _] in FILES_TO_DOWNLOAD {
             set.spawn(download_and_extract(
                 value.to_string(),
                 version_url_prefix.clone(),

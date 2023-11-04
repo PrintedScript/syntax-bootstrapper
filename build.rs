@@ -1,23 +1,9 @@
-use std::env;
 use std::fs;
+use std::env;
 use winres::WindowsResource;
-
-#[cfg(debug_assertions)]
-fn main() {
-    let build_date = chrono::Utc::now()
-        .format("%Y-%m-%d %H:%M:%S UTC")
-        .to_string();
-    let out_dir = env::var("OUT_DIR").unwrap();
-    let dest_path = format!("{}/build_date.txt", out_dir);
-    fs::write(&dest_path, &build_date).unwrap();
-}
-
-#[cfg(not(debug_assertions))]
 fn main() {
     // Get the current build date and time
-    let build_date = chrono::Utc::now()
-        .format("%Y-%m-%d %H:%M:%S UTC")
-        .to_string();
+    let build_date = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string();
 
     // Write the build date to a file
     let out_dir = env::var("OUT_DIR").unwrap();
