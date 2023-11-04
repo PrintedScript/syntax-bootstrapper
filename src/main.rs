@@ -55,6 +55,11 @@ async fn main() {
         std::process::Command::new("clear").spawn().unwrap();
     }
 
+    tracing_subscriber::fmt()
+        .with_max_level(MAX_TRACING_LEVEL)
+        .pretty()
+        .init();
+
     let args: Vec<String> = std::env::args().collect();
     let base_url: &str = "www.syntax.eco";
     let mut setup_url: &str = "setup.syntax.eco";
@@ -111,11 +116,6 @@ async fn main() {
             bootstrapper_info.magenta().cyan().italic().on_black()
         );
     }
-
-    tracing_subscriber::fmt()
-        .with_max_level(MAX_TRACING_LEVEL)
-        .pretty()
-        .init();
 
     let http_client: Client = reqwest::Client::builder().no_gzip().build().unwrap();
     debug!(
@@ -175,31 +175,30 @@ async fn main() {
 
     let installation_directory = get_installation_directory();
     debug!(
-        "Instillation Directory: {}",
-        format!("{:?}", installation_directory.display()).bright_blue()
+        "Installation Directory: {}",
+        installation_directory.to_str().unwrap().bright_blue()
     );
     create_folder_if_not_exists(&installation_directory).await;
 
     let versions_directory = installation_directory.join("Versions");
     debug!(
         "Versions Directory: {}",
-        format!("{:?}", versions_directory.display()).bright_blue()
+        versions_directory.to_str().unwrap().bright_blue()
     );
     create_folder_if_not_exists(&versions_directory).await;
 
     let temp_downloads_directory = installation_directory.join("Downloads");
     debug!(
         "Temp Downloads Directory: {}",
-        format!("{:?}", temp_downloads_directory.display()).bright_blue()
+        temp_downloads_directory.to_str().unwrap().bright_blue()
     );
     create_folder_if_not_exists(&temp_downloads_directory).await;
 
     let current_version_directory = versions_directory.join(format!("{}", latest_client_version));
     debug!(
         "Current Version Directory: {}",
-        format!("{:?}", current_version_directory.display()).bright_blue()
+        current_version_directory.to_str().unwrap().bright_blue()
     );
-
     create_folder_if_not_exists(&current_version_directory).await;
 
     let latest_bootstrapper_path = current_version_directory.join(bootstrapper_filename);
@@ -229,7 +228,7 @@ async fn main() {
             match command.spawn() {
                 Ok(_) => {}
                 Err(e) => {
-                    debug!("Bootstrapper errored with error {}", e);
+                    debug!(&format!("Bootstrapper errored with error {}", e));
                     info("Found bootstrapper was corrupted! Downloading...");
                     std::fs::remove_file(latest_bootstrapper_path.clone()).unwrap();
                     download_file(
