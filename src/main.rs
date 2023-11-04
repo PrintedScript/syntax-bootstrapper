@@ -55,11 +55,6 @@ async fn main() {
         std::process::Command::new("clear").spawn().unwrap();
     }
 
-    tracing_subscriber::fmt()
-        .with_max_level(MAX_TRACING_LEVEL)
-        .pretty()
-        .init();
-
     let args: Vec<String> = std::env::args().collect();
     let base_url: &str = "www.syntax.eco";
     let mut setup_url: &str = "setup.syntax.eco";
@@ -116,6 +111,11 @@ async fn main() {
             bootstrapper_info.magenta().cyan().italic().on_black()
         );
     }
+
+    tracing_subscriber::fmt()
+        .with_max_level(MAX_TRACING_LEVEL)
+        .pretty()
+        .init();
 
     let http_client: Client = reqwest::Client::builder().no_gzip().build().unwrap();
     debug!(
@@ -229,7 +229,7 @@ async fn main() {
             match command.spawn() {
                 Ok(_) => {}
                 Err(e) => {
-                    debug!(&format!("Bootstrapper errored with error {}", e));
+                    debug!("Bootstrapper errored with error {}", e);
                     info("Found bootstrapper was corrupted! Downloading...");
                     std::fs::remove_file(latest_bootstrapper_path.clone()).unwrap();
                     download_file(
