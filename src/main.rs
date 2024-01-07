@@ -281,7 +281,7 @@ async fn main() {
     // So delete the every file in the current version directory except for the Bootstrapper itself
     let app_settings_path = current_version_directory.join("AppSettings.xml");
     let client_executable_path = current_version_directory.join("SyntaxPlayerBeta.exe");
-    if !app_settings_path.exists() || !client_executable_path.exists() {
+    if !app_settings_path.exists() { //|| !client_executable_path.exists() {
         info("Downloading the latest client files, this may take a while.");
         for entry in std::fs::read_dir(&current_version_directory).unwrap() {
             let entry = entry.unwrap();
