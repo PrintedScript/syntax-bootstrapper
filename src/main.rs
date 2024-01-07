@@ -1,3 +1,4 @@
+use chrono::format;
 use colored::*;
 use std::path::PathBuf;
 use reqwest::Client;
@@ -295,82 +296,18 @@ async fn main() {
         }
 
         let VersionURLPrefix = format!("https://{}/{}-", setup_url, latest_client_version);
-        let SyntaxAppZip : PathBuf = download_file_prefix(&http_client, format!("{}SyntaxApp.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
-        let NPSyntaxProxyZip : PathBuf = download_file_prefix(&http_client, format!("{}NPSyntaxProxy.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
-        let SyntaxProxyZip : PathBuf = download_file_prefix(&http_client, format!("{}SyntaxProxy.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
-        let LibrariesZip : PathBuf = download_file_prefix(&http_client, format!("{}Libraries.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
-        let RedistZip : PathBuf = download_file_prefix(&http_client, format!("{}redist.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
-
-        let ContentTexturesZip : PathBuf = download_file_prefix(&http_client, format!("{}content-textures.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
-        let ContentTextures2Zip : PathBuf = download_file_prefix(&http_client, format!("{}content-textures2.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
-        let ContentTextures3Zip : PathBuf = download_file_prefix(&http_client, format!("{}content-textures3.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
-        let ContentTerrainZip : PathBuf = download_file_prefix(&http_client, format!("{}content-terrain.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
-        let ContentFontsZip : PathBuf = download_file_prefix(&http_client, format!("{}content-fonts.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
-        let ContentSoundsZip : PathBuf = download_file_prefix(&http_client, format!("{}content-sounds.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
-        let ContentScriptsZip : PathBuf = download_file_prefix(&http_client, format!("{}content-scripts.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
-        let ContentSkyZip : PathBuf = download_file_prefix(&http_client, format!("{}content-sky.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
-        let ContentMusicZip : PathBuf = download_file_prefix(&http_client, format!("{}content-music.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
-        let ContentParticles : PathBuf = download_file_prefix(&http_client, format!("{}content-particles.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
-
-        let ShadersZip : PathBuf = download_file_prefix(&http_client, format!("{}shaders.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
 
         let Client2018Zip : PathBuf = download_file_prefix(&http_client, format!("{}2018client.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
         let Client2020Zip : PathBuf = download_file_prefix(&http_client, format!("{}2020client.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
         let Client2014Zip : PathBuf = download_file_prefix(&http_client, format!("{}2014client.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
+        let Client2016Zip : PathBuf = download_file_prefix(&http_client, format!("{}2016client.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
         info("Download finished, extracting files.");
 
         fn extract_to_dir( zip_file : &PathBuf, target_dir : &PathBuf ) {
+            info(format!("Extracting {} to {}", zip_file.to_str().unwrap().bright_blue(), target_dir.to_str().unwrap().bright_blue()).as_str());
             let zip_file_cursor = std::fs::File::open(zip_file).unwrap();
             zip_extract::extract(zip_file_cursor, target_dir, false).unwrap();
         }
-        extract_to_dir(&SyntaxAppZip, &current_version_directory);
-        extract_to_dir(&NPSyntaxProxyZip, &current_version_directory);
-        extract_to_dir(&SyntaxProxyZip, &current_version_directory);
-        extract_to_dir(&LibrariesZip, &current_version_directory);
-        extract_to_dir(&RedistZip, &current_version_directory);
-
-        let content_directory = current_version_directory.join("content");
-        let platform_content_directory = current_version_directory.join("PlatformContent");
-        let shaders_directory = current_version_directory.join("shaders");
-
-        create_folder_if_not_exists(&content_directory).await;
-        create_folder_if_not_exists(&platform_content_directory).await;
-        create_folder_if_not_exists(&shaders_directory).await;
-
-        let fonts_directory = content_directory.join("fonts");
-        let music_directory = content_directory.join("music");
-        let particles_directory = content_directory.join("particles");
-        let sky_directory = content_directory.join("sky");
-        let sounds_directory = content_directory.join("sounds");
-        let textures_directory = content_directory.join("textures");
-        let scripts_directory = content_directory.join("scripts");
-
-        create_folder_if_not_exists(&fonts_directory).await;
-        create_folder_if_not_exists(&music_directory).await;
-        create_folder_if_not_exists(&particles_directory).await;
-        create_folder_if_not_exists(&sky_directory).await;
-        create_folder_if_not_exists(&sounds_directory).await;
-        create_folder_if_not_exists(&textures_directory).await;
-
-        extract_to_dir(&ContentTexturesZip, &textures_directory);
-        extract_to_dir(&ContentTextures2Zip, &textures_directory);
-        extract_to_dir(&ContentFontsZip, &fonts_directory);
-        extract_to_dir(&ContentSoundsZip, &sounds_directory);
-        extract_to_dir(&ContentSkyZip, &sky_directory);
-        extract_to_dir(&ContentMusicZip, &music_directory);
-        extract_to_dir(&ContentParticles, &particles_directory);
-        extract_to_dir(&ContentScriptsZip, &scripts_directory);
-
-        let platform_pc_directory = platform_content_directory.join("pc");
-        create_folder_if_not_exists(&platform_pc_directory).await;
-        let terrain_directory = platform_pc_directory.join("terrain");
-        let textures_directory = platform_pc_directory.join("textures");
-        create_folder_if_not_exists(&terrain_directory).await;
-        create_folder_if_not_exists(&textures_directory).await;
-
-        extract_to_dir(&ContentTerrainZip, &terrain_directory);
-        extract_to_dir(&ContentTextures3Zip, &textures_directory);
-        extract_to_dir(&ShadersZip, &shaders_directory);
 
         let client_2018_directory = current_version_directory.join("Client2018");
         create_folder_if_not_exists(&client_2018_directory).await;
@@ -383,6 +320,10 @@ async fn main() {
         let client_2014_directory = current_version_directory.join("Client2014");
         create_folder_if_not_exists(&client_2014_directory).await;
         extract_to_dir(&Client2014Zip, &client_2014_directory);
+
+        let client_2016_directory = current_version_directory.join("Client2016");
+        create_folder_if_not_exists(&client_2016_directory).await;
+        extract_to_dir(&Client2016Zip, &client_2016_directory);
 
         info("Finished extracting files, cleaning up.");
         std::fs::remove_dir_all(&temp_downloads_directory).unwrap();
@@ -442,7 +383,7 @@ x-scheme-handler/syntax-player=syntax-player.desktop
 "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <Settings>
 	<ContentFolder>content</ContentFolder>
-	<BaseUrl>https://{}</BaseUrl>
+	<BaseUrl>http://{}</BaseUrl>
 </Settings>", base_url
         );
         std::fs::write(app_settings_path, app_settings_xml).unwrap();
@@ -534,7 +475,7 @@ x-scheme-handler/syntax-player=syntax-player.desktop
     } else if client_year == "2014" {
         client_executable_path = current_version_directory.join("Client2014").join("SyntaxPlayerBeta.exe");
     } else {
-        client_executable_path = current_version_directory.join("SyntaxPlayerBeta.exe");
+        client_executable_path = current_version_directory.join("Client2016").join("SyntaxPlayerBeta.exe");
     }
     if !client_executable_path.exists() {
         // Delete AppSettings.xml so the bootstrapper will download the client again
