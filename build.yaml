@@ -1,0 +1,24 @@
+# Information about the startup ascii
+Ascii: 
+  Location: assets/ascii.txt
+  Padding: 4
+  FallbackText: SYNTAX Bootstrapper
+
+# Information to be used at runtime
+Runtime:
+  SetupUrl: setup.syntax.eco
+  BaseUrl: syntax.eco
+  ThreadCount: 2
+
+# Information about the exe
+Windows:
+  Icon: assets/Bootstrapper.ico
+  Resources: 
+    FileVersion: env:CARGO_PKG_VERSION
+    FileDescription: SYNTAX Windows Bootstrapper
+    ProductName: SYNTAX Bootstrapper
+    ProductVersion: env:CARGO_PKG_VERSION
+    InternalName: SYNTAX Bootstrapper
+    OriginalFilename: SyntaxPlayerLauncher.exe
+    CompanyName: SYNTAX Corporation
+    LegalCopyright: Copyright (c) 2024
