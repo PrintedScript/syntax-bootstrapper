@@ -298,8 +298,7 @@ Terminal=true
 Version={}
 MimeType=x-scheme-handler/syntax-player;", latest_bootstrapper_path.to_str().unwrap(), latest_bootstrapper_path.to_str().unwrap(), env!("CARGO_PKG_VERSION"));
                 
-                let desktop_file_path = "~/.local/share/applications/syntax-player.desktop";
-
+                let desktop_file_path = dirs::data_local_dir().unwrap().join("applications").join("syntax-player.desktop");
                 std::fs::write(desktop_file_path, desktop_file_content).unwrap();
 
                 info("Please launch SYNTAX from the website, to continue with the update process.");
@@ -390,8 +389,7 @@ Terminal=true
 Version={}
 MimeType=x-scheme-handler/syntax-player;", latest_bootstrapper_path.to_str().unwrap(), latest_bootstrapper_path.to_str().unwrap(), env!("CARGO_PKG_VERSION"));
             
-            let desktop_file_path = "~/.local/share/applications/syntax-player.desktop";
-
+            let desktop_file_path = dirs::data_local_dir().unwrap().join("applications").join("syntax-player.desktop");
             std::fs::write(desktop_file_path, desktop_file_content).unwrap();
         }
 
