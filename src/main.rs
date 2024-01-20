@@ -250,7 +250,7 @@ async fn main() {
     if !current_exe_path.starts_with(&current_version_directory) {
         // Check if the latest bootstrapper is downloaded
         if !latest_bootstrapper_path.exists() {
-            info("Downloading the latest bootstrapper and restarting");
+            info("Downloading the latest bootstrapper");
             // Download the latest bootstrapper
             download_file(&http_client, &format!("https://{}/{}-{}", setup_url, latest_client_version, bootstrapper_filename), &latest_bootstrapper_path).await;
         }
@@ -266,6 +266,7 @@ async fn main() {
         debug(&format!("Current Bootstrapper Hash: {}", current_exe_hash.bright_blue()));
 
         if latest_bootstrapper_hash != current_exe_hash {
+            info("Starting latest bootstrapper");
             // Run the latest bootstrapper ( with the same arguments passed to us ) and exit
             #[cfg(target_os = "windows")]
             {
@@ -288,10 +289,21 @@ async fn main() {
                 // Make sure the latest bootstrapper is executable
                 std::process::Command::new("chmod").arg("+x").arg(latest_bootstrapper_path.to_str().unwrap()).spawn().unwrap();
 
-                info("We need permission to run the latest bootstrapper");
-                let mut command = std::process::Command::new(latest_bootstrapper_path);
-                command.args(&args[1..]);
-                command.spawn().unwrap();
+                let desktop_file_content = &format!("[Desktop Entry]
+Name=Syntax Launcher
+Exec={} %u
+Icon={}
+Type=Application
+Terminal=true
+Version={}
+MimeType=x-scheme-handler/syntax-player;", latest_bootstrapper_path.to_str().unwrap(), latest_bootstrapper_path.to_str().unwrap(), env!("CARGO_PKG_VERSION"));
+                
+                let desktop_file_path = "~/.local/share/applications/syntax-player.desktop";
+
+                std::fs::write(desktop_file_path, desktop_file_content).unwrap();
+
+                info("Please launch SYNTAX from the website, to continue with the update process.");
+                std::thread::sleep(std::time::Duration::from_secs(20));
             }
             std::process::exit(0);
 
@@ -370,14 +382,15 @@ async fn main() {
         {
             // Linux support
             let desktop_file_content = &format!("[Desktop Entry]
-Name=Syntax Player
+Name=Syntax Launcher
 Exec={} %u
+Icon={}
 Type=Application
-Terminal=false
+Terminal=true
 Version={}
-MimeType=x-scheme-handler/syntax-player;", latest_bootstrapper_path.to_str().unwrap(), env!("CARGO_PKG_VERSION"));
+MimeType=x-scheme-handler/syntax-player;", latest_bootstrapper_path.to_str().unwrap(), latest_bootstrapper_path.to_str().unwrap(), env!("CARGO_PKG_VERSION"));
             
-            let desktop_file_path = "/usr/share/applications/syntax-player.desktop";
+            let desktop_file_path = "~/.local/share/applications/syntax-player.desktop";
 
             std::fs::write(desktop_file_path, desktop_file_content).unwrap();
         }
