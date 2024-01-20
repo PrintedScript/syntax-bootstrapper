@@ -1,0 +1,48 @@
+name: Build Release Executables
+on: 
+  release:
+    types:
+      - created
+
+jobs:
+  build-release-windows:
+    name: Build on Windows ${{ github.event.release.tag_name }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build 
+          args: --release
+      - name: Rename executable
+        run: mv target/release/syntax_bootstrapper.exe target/release/SyntaxPlayerLauncher.exe
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: target/release/SyntaxPlayerLauncher.exe
+          asset_name: SyntaxPlayerLauncher.exe
+          asset_content_type: application/octet-stream
+  
+  build-release-linux:
+    name: Build on Linux ${{ github.event.release.tag_name }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build 
+          args: --release
+      - name: Rename executable
+        run: mv target/release/syntax_bootstrapper target/release/SyntaxPlayerLinuxLauncher
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: target/release/SyntaxPlayerLinuxLauncher
+          asset_name: SyntaxPlayerLinuxLauncher
+          asset_content_type: application/octet-stream

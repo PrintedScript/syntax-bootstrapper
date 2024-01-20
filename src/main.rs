@@ -6,6 +6,7 @@ use dirs::data_local_dir;
 use futures_util::StreamExt;
 use md5;
 use zip_extract;
+use sha1::{Sha1, Digest};
 
 #[cfg(target_os = "windows")]
 use std::os::windows::prelude::FileExt;
@@ -110,6 +111,14 @@ pub async fn create_folder_if_not_exists( path: &PathBuf ) {
         info(&format!("Creating folder {}", path.to_str().unwrap().bright_blue()));
         std::fs::create_dir_all(path).unwrap();
     }
+}
+
+pub async fn get_sha1_hash_of_file( path: &PathBuf ) -> String {
+    let mut file = std::fs::File::open(path).unwrap();
+    let mut hasher = Sha1::new();
+    std::io::copy(&mut file, &mut hasher).unwrap();
+    let hash = hasher.finalize();
+    return format!("{:x}", hash);
 }
 
 fn get_installation_directory() -> PathBuf {
@@ -245,34 +254,48 @@ async fn main() {
             // Download the latest bootstrapper
             download_file(&http_client, &format!("https://{}/{}-{}", setup_url, latest_client_version, bootstrapper_filename), &latest_bootstrapper_path).await;
         }
-        // Run the latest bootstrapper ( with the same arguments passed to us ) and exit
-        #[cfg(target_os = "windows")]
-        {
-            let mut command = std::process::Command::new(latest_bootstrapper_path.clone());
-            command.args(&args[1..]);
-            match command.spawn() {
-                Ok(_) => {},
-                Err(e) => {
-                    debug(&format!("Bootstrapper errored with error {}", e));
-                    info("Found bootstrapper was corrupted! Downloading...");
-                    std::fs::remove_file(latest_bootstrapper_path.clone()).unwrap();
-                    download_file(&http_client, &format!("https://{}/{}-{}", setup_url, latest_client_version, bootstrapper_filename), &latest_bootstrapper_path).await;
-                    command.spawn().expect("Bootstrapper is still corrupted.");
-                    std::thread::sleep(std::time::Duration::from_secs(20));
+
+        // Lets compare the SHA1 hash of the latest bootstrapper to the one we are currently running
+        // If they are the same, then we can continue with the update process
+        // We do this because antivirus software does not like this type of behavior
+
+        let latest_bootstrapper_hash = get_sha1_hash_of_file(&latest_bootstrapper_path).await;
+        let current_exe_hash = get_sha1_hash_of_file(&current_exe_path).await;
+
+        debug(&format!("Latest Bootstrapper Hash: {}", latest_bootstrapper_hash.bright_blue()));
+        debug(&format!("Current Bootstrapper Hash: {}", current_exe_hash.bright_blue()));
+
+        if latest_bootstrapper_hash != current_exe_hash {
+            // Run the latest bootstrapper ( with the same arguments passed to us ) and exit
+            #[cfg(target_os = "windows")]
+            {
+                let mut command = std::process::Command::new(latest_bootstrapper_path.clone());
+                command.args(&args[1..]);
+                match command.spawn() {
+                    Ok(_) => {},
+                    Err(e) => {
+                        debug(&format!("Bootstrapper errored with error {}", e));
+                        info("Found bootstrapper was corrupted! Downloading...");
+                        std::fs::remove_file(latest_bootstrapper_path.clone()).unwrap();
+                        download_file(&http_client, &format!("https://{}/{}-{}", setup_url, latest_client_version, bootstrapper_filename), &latest_bootstrapper_path).await;
+                        command.spawn().expect("Bootstrapper is still corrupted.");
+                        std::thread::sleep(std::time::Duration::from_secs(20));
+                    }
                 }
             }
-        }
-        #[cfg(not(target_os = "windows"))]
-        {
-            // Make sure the latest bootstrapper is executable
-            std::process::Command::new("chmod").arg("+x").arg(latest_bootstrapper_path.to_str().unwrap()).spawn().unwrap();
+            #[cfg(not(target_os = "windows"))]
+            {
+                // Make sure the latest bootstrapper is executable
+                std::process::Command::new("chmod").arg("+x").arg(latest_bootstrapper_path.to_str().unwrap()).spawn().unwrap();
 
-            info("We need permission to run the latest bootstrapper");
-            let mut command = std::process::Command::new(latest_bootstrapper_path);
-            command.args(&args[1..]);
-            command.spawn().unwrap();
+                info("We need permission to run the latest bootstrapper");
+                let mut command = std::process::Command::new(latest_bootstrapper_path);
+                command.args(&args[1..]);
+                command.spawn().unwrap();
+            }
+            std::process::exit(0);
+
         }
-        std::process::exit(0);
     }
 
     // Looks like we are running from the latest version directory, so we can continue with the update process
@@ -280,14 +303,13 @@ async fn main() {
     // If it doesent exist, then we got either a fresh directory or a corrupted installation
     // So delete the every file in the current version directory except for the Bootstrapper itself
     let app_settings_path = current_version_directory.join("AppSettings.xml");
-    let client_executable_path = current_version_directory.join("SyntaxPlayerBeta.exe");
     if !app_settings_path.exists() { //|| !client_executable_path.exists() {
         info("Downloading the latest client files, this may take a while.");
         for entry in std::fs::read_dir(&current_version_directory).unwrap() {
             let entry = entry.unwrap();
             let path = entry.path();
             if path.is_file() {
-                if path != current_exe_path {
+                if path != latest_bootstrapper_path {
                     std::fs::remove_file(path).unwrap();
                 }
             } else {
@@ -339,43 +361,28 @@ async fn main() {
             let hkey_syntax_player_shell_open = hkey_syntax_player_shell.create_subkey("open").unwrap().0;
             let hkey_syntax_player_shell_open_command = hkey_syntax_player_shell_open.create_subkey("command").unwrap().0;
             let defaulticon = hkey_syntax_player.create_subkey("DefaultIcon").unwrap().0;
-            hkey_syntax_player_shell_open_command.set_value("", &format!("\"{}\" \"%1\"", current_exe_path.to_str().unwrap())).unwrap();
-            defaulticon.set_value("", &format!("\"{}\",0", current_exe_path.to_str().unwrap())).unwrap();
+            hkey_syntax_player_shell_open_command.set_value("", &format!("\"{}\" \"%1\"", latest_bootstrapper_path.to_str().unwrap())).unwrap();
+            defaulticon.set_value("", &format!("\"{}\",0", latest_bootstrapper_path.to_str().unwrap())).unwrap();
             hkey_syntax_player.set_value("", &format!("URL: Syntax Protocol")).unwrap();
             hkey_syntax_player.set_value("URL Protocol", &"").unwrap();
         }
         #[cfg(not(target_os = "windows"))]
         {
             // Linux support
-            // We have to write a .desktop file to ~/.local/share/applications
-            let desktop_file_path = dirs::data_local_dir().unwrap().join("applications").join("syntax-player.desktop");
-            let desktop_file = format!(
-"[Desktop Entry]
-Name=Syntax Launcher
+            let desktop_file_content = &format!("[Desktop Entry]
+Name=Syntax Player
 Exec={} %u
-Terminal=true
 Type=Application
-MimeType=x-scheme-handler/syntax-player;
-Icon={}
-StartupWMClass=SyntaxLauncher
-Categories=Game;
-Comment=Syntax Launcher
-", current_exe_path.to_str().unwrap(), current_exe_path.to_str().unwrap());
-            std::fs::write(desktop_file_path, desktop_file).unwrap();
-            // We also have to write a mimeapps.list file to ~/.config
-            let mimeapps_list_path = dirs::config_dir().unwrap().join("mimeapps.list");
-            let mimeapps_list = format!(
-"[Default Applications]
-x-scheme-handler/syntax-player=syntax-player.desktop
-");
-            std::fs::write(mimeapps_list_path, mimeapps_list).unwrap();
-            // We also have to write a mimeapps.list file to ~/.local/share
-            let mimeapps_list_path = dirs::data_local_dir().unwrap().join("mimeapps.list");
-            let mimeapps_list = format!(
-"[Default Applications]
-x-scheme-handler/syntax-player=syntax-player.desktop
-");
-            std::fs::write(mimeapps_list_path, mimeapps_list).unwrap();
+Terminal=false
+Version={}
+MimeType=x-scheme-handler/syntax-player;", latest_bootstrapper_path.to_str().unwrap(), env!("CARGO_PKG_VERSION"));
+            
+            let desktop_file_path = "/usr/share/applications/syntax-player.desktop";
+
+            let mut file = File::create(desktop_file_path).expect("Unable to create desktop file");
+            file.write_all(desktop_file_content.as_bytes())
+                .expect("Unable to write to desktop file");
+                    
         }
 
         // Write the AppSettings.xml file
