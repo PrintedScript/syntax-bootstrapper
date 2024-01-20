@@ -379,10 +379,7 @@ MimeType=x-scheme-handler/syntax-player;", latest_bootstrapper_path.to_str().unw
             
             let desktop_file_path = "/usr/share/applications/syntax-player.desktop";
 
-            let mut file = File::create(desktop_file_path).expect("Unable to create desktop file");
-            file.write_all(desktop_file_content.as_bytes())
-                .expect("Unable to write to desktop file");
-                    
+            std::fs::write(desktop_file_path, desktop_file_content).unwrap();
         }
 
         // Write the AppSettings.xml file
