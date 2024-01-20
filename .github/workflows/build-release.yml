@@ -8,6 +8,8 @@ jobs:
   build-release-windows:
     name: Build on Windows ${{ github.event.release.tag_name }}
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/cargo@v1
@@ -29,6 +31,8 @@ jobs:
   build-release-linux:
     name: Build on Linux ${{ github.event.release.tag_name }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/cargo@v1
