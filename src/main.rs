@@ -334,6 +334,7 @@ MimeType=x-scheme-handler/syntax-player;", latest_bootstrapper_path.to_str().unw
         let Client2020Zip : PathBuf = download_file_prefix(&http_client, format!("{}2020client.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
         let Client2014Zip : PathBuf = download_file_prefix(&http_client, format!("{}2014client.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
         let Client2016Zip : PathBuf = download_file_prefix(&http_client, format!("{}2016client.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
+        let Client2021Zip : PathBuf = download_file_prefix(&http_client, format!("{}2021client.zip", VersionURLPrefix).as_str(), &temp_downloads_directory).await;
         info("Download finished, extracting files.");
 
         fn extract_to_dir( zip_file : &PathBuf, target_dir : &PathBuf ) {
@@ -357,6 +358,10 @@ MimeType=x-scheme-handler/syntax-player;", latest_bootstrapper_path.to_str().unw
         let client_2016_directory = current_version_directory.join("Client2016");
         create_folder_if_not_exists(&client_2016_directory).await;
         extract_to_dir(&Client2016Zip, &client_2016_directory);
+
+        let client_2021_directory = current_version_directory.join("Client2021");
+        create_folder_if_not_exists(&client_2021_directory).await;
+        extract_to_dir(&Client2016Zip, &client_2021_directory);
 
         info("Finished extracting files, cleaning up.");
         std::fs::remove_dir_all(&temp_downloads_directory).unwrap();
@@ -489,6 +494,8 @@ MimeType=x-scheme-handler/syntax-player;", latest_bootstrapper_path.to_str().unw
         client_executable_path = current_version_directory.join("Client2020").join("SyntaxPlayerBeta.exe");
     } else if client_year == "2014" {
         client_executable_path = current_version_directory.join("Client2014").join("SyntaxPlayerBeta.exe");
+    } else if client_year == "2021" {
+        client_executable_path = current_version_directory.join("Client2021").join("SyntaxPlayerBeta.exe");
     } else {
         client_executable_path = current_version_directory.join("Client2016").join("SyntaxPlayerBeta.exe");
     }
