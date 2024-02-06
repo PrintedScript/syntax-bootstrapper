@@ -361,7 +361,7 @@ MimeType=x-scheme-handler/syntax-player;", latest_bootstrapper_path.to_str().unw
 
         let client_2021_directory = current_version_directory.join("Client2021");
         create_folder_if_not_exists(&client_2021_directory).await;
-        extract_to_dir(&Client2016Zip, &client_2021_directory);
+        extract_to_dir(&Client2021Zip, &client_2021_directory);
 
         info("Finished extracting files, cleaning up.");
         std::fs::remove_dir_all(&temp_downloads_directory).unwrap();
